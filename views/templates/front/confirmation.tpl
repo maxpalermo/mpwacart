@@ -75,24 +75,47 @@
                         
                         {if $use_direct_link}
                         <div class="wacart-whatsapp-buttons">
-                            <p class="wacart-direct-link-info">{l s='Utilizza il pulsante qui sotto per inviare il messaggio WhatsApp:' mod='mpwacart'}</p>
-                            
-                            <div class="wacart-button-group">
-                                <a href="{$wa_link_owner}" target="_blank" class="btn btn-success btn-lg">
-                                    <i class="fab fa-whatsapp"></i> {l s='Invia messaggio al titolare' mod='mpwacart'}
-                                </a>
-                            </div>
-                            
-                            <p class="wacart-direct-link-note">
+                            <div class="alert alert-info wacart-redirect-info">
                                 <i class="material-icons">info</i> 
-                                {l s='Nota: Questo link apre WhatsApp con un messaggio precompilato. Dovrai cliccare su Invia per completare l\'invio.' mod='mpwacart'}
-                            </p>
+                                {l s='Stai per essere reindirizzato a WhatsApp. Quando si aprirà la pagina, premi "Invia" per completare l\'invio del messaggio.' mod='mpwacart'}
+                            </div>
+                            <div id="countdown-container-owner">
+                                <p>{l s='Reindirizzamento in' mod='mpwacart'} <span id="countdown-owner">5</span> {l s='secondi' mod='mpwacart'}...</p>
+                                <div class="progress">
+                                    <div class="progress-bar bg-success" role="progressbar" style="width: 100%" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" id="progress-bar-owner"></div>
+                                </div>
+                            </div>
+                            <a href="{$wa_link_owner}" target="_blank" id="whatsapp-link-owner" class="btn btn-success btn-lg">
+                                <i class="fab fa-whatsapp"></i> {l s='Apri WhatsApp ora' mod='mpwacart'}
+                            </a>
+                            <script type="text/javascript">
+                                document.addEventListener('DOMContentLoaded', function() {
+                                    var countdown = 5;
+                                    var countdownElement = document.getElementById('countdown-owner');
+                                    var progressBar = document.getElementById('progress-bar-owner');
+                                    var whatsappLink = document.getElementById('whatsapp-link-owner');
+                                    var whatsappUrl = '{$wa_link_owner}';
+                                    
+                                    var timer = setInterval(function() {
+                                        countdown--;
+                                        countdownElement.textContent = countdown;
+                                        progressBar.style.width = (countdown / 5 * 100) + '%';
+                                        
+                                        if (countdown <= 0) {
+                                            clearInterval(timer);
+                                            window.open(whatsappUrl, '_blank');
+                                            document.getElementById('countdown-container-owner').innerHTML = '<p class="text-success">{l s="WhatsApp è stato aperto in una nuova finestra." mod="mpwacart"}</p>';
+                                        }
+                                    }, 1000);
+                                });
+                            </script>
                         </div>
                         {else}
                         <div class="wacart-whatsapp-button">
-                            <a href="{$whatsapp_link}" target="_blank" class="btn btn-success btn-lg">
-                                <i class="fab fa-whatsapp"></i> {l s='Apri WhatsApp' mod='mpwacart'}
-                            </a>
+                            <div class="alert alert-success wacart-success-info">
+                                <i class="material-icons">check_circle</i> 
+                                {l s='Il messaggio è stato inviato automaticamente al titolare. Riceverai presto una risposta.' mod='mpwacart'}
+                            </div>
                         </div>
                         {/if}
                     </div>

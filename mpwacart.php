@@ -1,4 +1,7 @@
 <?php
+
+use MpSoft\MpWaCart\Entity\WaCartRequest;
+
 /**
  * Copyright since 2007 PrestaShop SA and Contributors
  * PrestaShop is an International Registered Trademark & Property of PrestaShop SA
@@ -17,16 +20,14 @@
  * @copyright Since 2023 Massimiliano Palermo
  * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
  */
-
 if (!defined('_PS_VERSION_')) {
     exit;
 }
 
 require_once __DIR__ . '/vendor/autoload.php';
 
+use MpSoft\MpWaCart\Install\InstallMenu;
 use PrestaShop\PrestaShop\Core\Module\WidgetInterface;
-use MpSoft\MpWaCart\Entity\WaCartRequest;
-use MpSoft\MpWaCart\Entity\WaCartConversation;
 
 class MpWaCart extends Module implements WidgetInterface
 {
@@ -36,7 +37,7 @@ class MpWaCart extends Module implements WidgetInterface
     {
         $this->name = 'mpwacart';
         $this->tab = 'front_office_features';
-        $this->version = '1.1.0';
+        $this->version = '1.1.3';
         $this->author = 'Massimiliano Palermo';
         $this->need_instance = 0;
         $this->bootstrap = true;
@@ -60,44 +61,79 @@ class MpWaCart extends Module implements WidgetInterface
      */
     public function install()
     {
-        include(dirname(__FILE__) . '/sql/install.php');
+        include dirname(__FILE__) . '/sql/install.php';
 
-        return parent::install() &&
-            $this->registerHook('header') &&
-            $this->registerHook('displayShoppingCartFooter') &&
-            $this->registerHook('displayCustomerAccount') &&
-            $this->registerHook('actionFrontControllerSetMedia') &&
-            $this->registerHook('displayAdminOrder');
+        // Installa il tab di amministrazione
+        $tab = new Tab();
+        $tab->active = 1;
+        $tab->class_name = 'AdminWaCartRequests';
+        $tab->name = [];
+        foreach (Language::getLanguages(true) as $lang) {
+            $tab->name[$lang['id_lang']] = 'Richieste WhatsApp';
+        }
+        // Utilizzo dell'approccio consigliato per PrestaShop 8
+        $tabRepository = $this->get('prestashop.core.admin.tab.repository');
+        $tabId = $tabRepository->findOneIdByClassName('AdminParentOrders');
+        $tab->id_parent = (int) $tabId;
+        $tab->module = $this->name;
+        $tab->add();
+
+        // Imposta la versione iniziale del modulo
+        Configuration::updateValue('MPWACART_VERSION', $this->version);
+
+        $installMenu = new InstallMenu($this);
+
+        return parent::install()
+            && $this->registerHook('header')
+            && $this->registerHook('displayShoppingCartFooter')
+            && $this->registerHook('displayCustomerAccount')
+            && $this->registerHook('actionFrontControllerSetMedia')
+            && $this->registerHook('displayAdminOrder')
+            && $installMenu->installMenu(
+                'AdminWaCartRequests',
+                'Richieste WhatsApp',
+                'AdminParentOrders',
+                '',
+                'admin_wa_cart_requests',
+                'Richieste WhatsApp',
+                'Modules',
+                null,
+                true,
+                true
+            );
     }
-    
+
     /**
      * Esegue gli aggiornamenti del modulo quando viene aggiornata la versione
+     *
      * @return array Risultato dell'aggiornamento
      */
     public function runUpgradeModule()
     {
         $result = [];
         $oldVersion = Configuration::get('MPWACART_VERSION');
-        
+
         if (!$oldVersion) {
             // Se non esiste la versione precedente, imposta la versione attuale
             Configuration::updateValue('MPWACART_VERSION', $this->version);
             $result[] = $this->displayConfirmation($this->l('Modulo inizializzato alla versione ') . $this->version);
+
             return $result;
         }
-        
+
         if (version_compare($oldVersion, '1.1.0', '<')) {
             // Esegui l'aggiornamento alla versione 1.1.0
-            if (!include(dirname(__FILE__) . '/sql/update_1.1.0.php')) {
+            if (!include (dirname(__FILE__) . '/sql/update_1.1.0.php')) {
                 $result[] = $this->displayError($this->l('Errore durante l\'aggiornamento alla versione 1.1.0'));
+
                 return $result;
             }
             $result[] = $this->displayConfirmation($this->l('Aggiornamento alla versione 1.1.0 completato con successo'));
         }
-        
+
         // Aggiorna la versione salvata
         Configuration::updateValue('MPWACART_VERSION', $this->version);
-        
+
         return $result;
     }
 
@@ -108,7 +144,21 @@ class MpWaCart extends Module implements WidgetInterface
      */
     public function uninstall()
     {
-        include(dirname(__FILE__) . '/sql/uninstall.php');
+        include dirname(__FILE__) . '/sql/uninstall.php';
+
+        // Rimuovi il tab di amministrazione
+        $installMenu = new InstallMenu($this);
+        $installMenu->uninstallMenu('AdminWaCartRequests');
+
+        // Rimuovi le configurazioni
+        Configuration::deleteByName('MPWACART_API_KEY');
+        Configuration::deleteByName('MPWACART_PHONE_NUMBER_ID');
+        Configuration::deleteByName('MPWACART_OWNER_PHONE');
+        Configuration::deleteByName('MPWACART_MESSAGE_TEMPLATE');
+        Configuration::deleteByName('MPWACART_TEST_MODE');
+        Configuration::deleteByName('MPWACART_HIDE_CHECKOUT');
+        Configuration::deleteByName('MPWACART_USE_DIRECT_LINK');
+        Configuration::deleteByName('MPWACART_VERSION');
 
         return parent::uninstall();
     }
@@ -125,9 +175,9 @@ class MpWaCart extends Module implements WidgetInterface
             $whatsappPhoneNumberId = Tools::getValue('MPWACART_PHONE_NUMBER_ID');
             $ownerPhone = Tools::getValue('MPWACART_OWNER_PHONE');
             $messageTemplate = Tools::getValue('MPWACART_MESSAGE_TEMPLATE');
-            $testMode = (int)Tools::getValue('MPWACART_TEST_MODE');
-            $hideCheckoutButton = (int)Tools::getValue('MPWACART_HIDE_CHECKOUT');
-            $useDirectLink = (int)Tools::getValue('MPWACART_USE_DIRECT_LINK');
+            $testMode = (int) Tools::getValue('MPWACART_TEST_MODE');
+            $hideCheckoutButton = (int) Tools::getValue('MPWACART_HIDE_CHECKOUT');
+            $useDirectLink = (int) Tools::getValue('MPWACART_USE_DIRECT_LINK');
 
             Configuration::updateValue('MPWACART_API_KEY', $whatsappApiKey);
             Configuration::updateValue('MPWACART_PHONE_NUMBER_ID', $whatsappPhoneNumberId);
@@ -222,13 +272,13 @@ class MpWaCart extends Module implements WidgetInterface
                             [
                                 'id' => 'active_on',
                                 'value' => 1,
-                                'label' => $this->l('Sì')
+                                'label' => $this->l('Sì'),
                             ],
                             [
                                 'id' => 'active_off',
                                 'value' => 0,
-                                'label' => $this->l('No')
-                            ]
+                                'label' => $this->l('No'),
+                            ],
                         ],
                     ],
                     [
@@ -240,13 +290,13 @@ class MpWaCart extends Module implements WidgetInterface
                             [
                                 'id' => 'active_on',
                                 'value' => 1,
-                                'label' => $this->l('Sì')
+                                'label' => $this->l('Sì'),
                             ],
                             [
                                 'id' => 'active_off',
                                 'value' => 0,
-                                'label' => $this->l('No')
-                            ]
+                                'label' => $this->l('No'),
+                            ],
                         ],
                     ],
                     [
@@ -258,13 +308,13 @@ class MpWaCart extends Module implements WidgetInterface
                             [
                                 'id' => 'active_on',
                                 'value' => 1,
-                                'label' => $this->l('Sì')
+                                'label' => $this->l('Sì'),
                             ],
                             [
                                 'id' => 'active_off',
                                 'value' => 0,
-                                'label' => $this->l('No')
-                            ]
+                                'label' => $this->l('No'),
+                            ],
                         ],
                     ],
                 ],
@@ -285,9 +335,9 @@ class MpWaCart extends Module implements WidgetInterface
             'MPWACART_PHONE_NUMBER_ID' => Configuration::get('MPWACART_PHONE_NUMBER_ID'),
             'MPWACART_OWNER_PHONE' => Configuration::get('MPWACART_OWNER_PHONE'),
             'MPWACART_MESSAGE_TEMPLATE' => Configuration::get('MPWACART_MESSAGE_TEMPLATE') ?: 'Grazie {customer_name} per la tua richiesta di preventivo! Abbiamo ricevuto il tuo carrello con {products_count} prodotti per un totale di {total}. Ti contatteremo al più presto per confermare i dettagli.',
-            'MPWACART_TEST_MODE' => (int)Configuration::get('MPWACART_TEST_MODE'),
-            'MPWACART_HIDE_CHECKOUT' => (int)Configuration::get('MPWACART_HIDE_CHECKOUT'),
-            'MPWACART_USE_DIRECT_LINK' => (int)Configuration::get('MPWACART_USE_DIRECT_LINK'),
+            'MPWACART_TEST_MODE' => (int) Configuration::get('MPWACART_TEST_MODE'),
+            'MPWACART_HIDE_CHECKOUT' => (int) Configuration::get('MPWACART_HIDE_CHECKOUT'),
+            'MPWACART_USE_DIRECT_LINK' => (int) Configuration::get('MPWACART_USE_DIRECT_LINK'),
         ];
     }
 
@@ -297,7 +347,7 @@ class MpWaCart extends Module implements WidgetInterface
     public function hookActionFrontControllerSetMedia()
     {
         $controller = $this->context->controller->php_self;
-        
+
         if ($controller == 'cart' || $controller == 'order') {
             $this->context->controller->registerStylesheet(
                 'mpwacart-style',
@@ -331,24 +381,24 @@ class MpWaCart extends Module implements WidgetInterface
         if (!isset($this->context->cart) || !$this->context->cart->nbProducts()) {
             return;
         }
-        
+
         // Salva temporaneamente le variabili Smarty che potrebbero entrare in conflitto
         $originalProduct = $this->context->smarty->getTemplateVars('product');
-        
+
         $this->context->smarty->assign([
             'mpwacart_request_url' => $this->context->link->getModuleLink('mpwacart', 'request'),
             'cart_products_count' => $this->context->cart->nbProducts(),
             'cart_total' => $this->context->cart->getOrderTotal(true),
-            'hide_checkout_button' => (bool)Configuration::get('MPWACART_HIDE_CHECKOUT'),
+            'hide_checkout_button' => (bool) Configuration::get('MPWACART_HIDE_CHECKOUT'),
         ]);
 
         $output = $this->display(__FILE__, 'views/templates/hook/cart_footer.tpl');
-        
+
         // Ripristina le variabili originali
         if ($originalProduct !== null) {
             $this->context->smarty->assign('product', $originalProduct);
         }
-        
+
         return $output;
     }
 
@@ -361,20 +411,20 @@ class MpWaCart extends Module implements WidgetInterface
     {
         $id_order = $params['id_order'];
         $order = new Order($id_order);
-        
+
         // Verifica se esiste una richiesta per questo carrello
         $id_cart = $order->id_cart;
         $requests = WaCartRequest::getByCartId($id_cart);
-        
+
         if (!$requests) {
             return '';
         }
-        
+
         $this->context->smarty->assign([
             'requests' => $requests,
             'mpwacart_admin_link' => $this->context->link->getAdminLink('AdminWaCartRequests'),
         ]);
-        
+
         return $this->display(__FILE__, 'views/templates/hook/admin_order.tpl');
     }
 
@@ -383,7 +433,7 @@ class MpWaCart extends Module implements WidgetInterface
         if ($hookName == 'displayShoppingCartFooter') {
             return $this->hookDisplayShoppingCartFooter();
         }
-        
+
         return '';
     }
 
@@ -394,10 +444,10 @@ class MpWaCart extends Module implements WidgetInterface
                 'mpwacart_request_url' => $this->context->link->getModuleLink('mpwacart', 'request'),
                 'cart_products_count' => $this->context->cart->nbProducts(),
                 'cart_total' => $this->context->cart->getOrderTotal(true),
-                'hide_checkout_button' => (bool)Configuration::get('MPWACART_HIDE_CHECKOUT'),
+                'hide_checkout_button' => (bool) Configuration::get('MPWACART_HIDE_CHECKOUT'),
             ];
         }
-        
+
         return [];
     }
 }
