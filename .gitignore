@@ -71,7 +71,6 @@
 *.hot-update.js
 *.hot-update.json
 
-
 /admin-dev/autoupgrade/*
 !/admin-dev/autoupgrade/index.php
 !/admin-dev/autoupgrade/backup/index.php
@@ -86,6 +85,11 @@
 /admin-dev/export/*
 !/admin-dev/export/.htaccess
 !/admin-dev/export/index.php
+
+# Cartella pdf del modulo
+/pdf/*
+!/pdf/.htaccess
+!/pdf/index.php
 
 # Downloaded RTL files
 /admin-dev/themes/default/css/bundle/default_rtl.css
@@ -170,4 +174,3 @@ themes/default-bootstrap/modules/*/mails/*
 !var/SymfonyRequirements.php
 /vendor/
 /web/bundles/
-

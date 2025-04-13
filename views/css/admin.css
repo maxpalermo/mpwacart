@@ -1,0 +1,151 @@
+/**
+ * WhatsApp Cart Module for PrestaShop
+ * 
+ * @author    Massimiliano Palermo <maxx.palermo@gmail.com>
+ * @copyright Since 2023 Massimiliano Palermo
+ * @license   https://opensource.org/licenses/AFL-3.0 Academic Free License version 3.0
+ */
+
+/* Conversazione WhatsApp */
+.wacart-conversation {
+    background-color: #f5f5f5;
+    border-radius: 5px;
+    padding: 15px;
+}
+
+.wacart-messages {
+    max-height: 400px;
+    overflow-y: auto;
+    margin-bottom: 20px;
+    padding: 10px;
+}
+
+.wacart-messages:after {
+    content: "";
+    display: table;
+    clear: both;
+}
+
+.wacart-message {
+    margin-bottom: 15px;
+    max-width: 80%;
+    clear: both;
+    position: relative;
+}
+
+.wacart-message-incoming {
+    float: left;
+}
+
+.wacart-message-outgoing {
+    float: right;
+}
+
+.wacart-message-content {
+    padding: 10px 15px;
+    border-radius: 10px;
+    word-wrap: break-word;
+    position: relative;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.wacart-message-incoming .wacart-message-content {
+    background-color: #fff;
+    border: 1px solid #ddd;
+}
+
+.wacart-message-incoming .wacart-message-content:before {
+    content: "";
+    position: absolute;
+    left: -8px;
+    top: 10px;
+    border-top: 8px solid transparent;
+    border-right: 8px solid #fff;
+    border-bottom: 8px solid transparent;
+}
+
+.wacart-message-outgoing .wacart-message-content {
+    background-color: #dcf8c6;
+    border: 1px solid #c8e6c9;
+}
+
+.wacart-message-outgoing .wacart-message-content:before {
+    content: "";
+    position: absolute;
+    right: -8px;
+    top: 10px;
+    border-top: 8px solid transparent;
+    border-left: 8px solid #dcf8c6;
+    border-bottom: 8px solid transparent;
+}
+
+.wacart-message-time {
+    font-size: 11px;
+    color: #999;
+    margin-top: 5px;
+    text-align: right;
+}
+
+.wacart-message-form {
+    clear: both;
+    padding-top: 15px;
+    border-top: 1px solid #ddd;
+}
+
+/* Badge personalizzati */
+.badge-primary {
+    background-color: #25b9d7;
+}
+
+.badge-info {
+    background-color: #5bc0de;
+}
+
+.badge-success {
+    background-color: #72c279;
+}
+
+.badge-warning {
+    background-color: #fbbb22;
+}
+
+.badge-danger {
+    background-color: #e08f95;
+}
+
+/* Icona WhatsApp */
+.icon-whatsapp:before {
+    content: "\f232";
+    font-family: "FontAwesome";
+}
+
+/* Bottoni */
+.btn-whatsapp {
+    background-color: #25D366;
+    border-color: #25D366;
+    color: #fff;
+}
+
+.btn-whatsapp:hover,
+.btn-whatsapp:focus,
+.btn-whatsapp:active {
+    background-color: #128C7E;
+    border-color: #128C7E;
+    color: #fff;
+}
+
+/* Dettagli richiesta */
+.wacart-detail-row {
+    margin-bottom: 10px;
+}
+
+.wacart-detail-label {
+    font-weight: bold;
+}
+
+/* Responsive */
+@media (max-width: 992px) {
+    .wacart-message {
+        max-width: 90%;
+    }
+}
